@@ -1,5 +1,11 @@
 """Shared test data: hand-built OCR lines and MRZ fixtures. All people and numbers are fictional."""
 
+import io
+
+import numpy as np
+import zxingcpp
+from PIL import Image, ImageDraw, ImageFont
+
 from id_atlas import mrz
 from id_atlas.engine import Line
 
@@ -33,3 +39,32 @@ def line(text: str, x: float = 30, y: float = 30, score: float = 0.99, h: float 
 def stacked(*texts: str, score: float = 0.99) -> list[Line]:
     """Lines one under another, as a card's rows come back from the OCR."""
     return [line(t, y=30 + i * 40, score=score) for i, t in enumerate(texts)]
+
+
+def card_image(*rows: str, size: tuple[int, int] = (900, 360), background="white") -> Image.Image:
+    """A page with one row of black text per argument, like the printed rows of a card."""
+    img = Image.new("RGB", size, background)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default(size=34)
+    for i, text in enumerate(rows):
+        draw.text((30, 30 + i * 90), text, fill="black", font=font)
+    return img
+
+
+def barcode_image(
+    fmt: zxingcpp.BarcodeFormat, text: str = "TEST-PAYLOAD-123456", scale: int = 3
+) -> Image.Image:
+    return Image.fromarray(
+        np.array(zxingcpp.write_barcode_to_image(zxingcpp.create_barcode(text, fmt), scale=scale))
+    ).convert("RGB")
+
+
+def encode(img: Image.Image, fmt: str = "PNG", **options) -> bytes:
+    buffer = io.BytesIO()
+    img.convert("RGB").save(buffer, fmt, **options)
+    return buffer.getvalue()
+
+
+def bgr(img: Image.Image) -> np.ndarray:
+    """The array the OCR engine takes: BGR, as OpenCV orders it."""
+    return np.ascontiguousarray(np.asarray(img.convert("RGB"))[:, :, ::-1])
