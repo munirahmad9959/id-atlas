@@ -111,8 +111,21 @@ _DATE = re.compile(
 _NUMBER = re.compile(r"(?<!\d)([1-9])[\s-]?(\d{4})[\s-]?(\d{4})(?!\d)")
 
 
+# Lines carrying one of these words are another field's label (or a label and its value).
+_LABEL_WORDS = re.compile(
+    r"NOMBRE|APELLIDO|NACIMIENTO|F\.\s*NAC|VENC|EXPEDICI|DOMICILIO|PADRE|MADRE|N[UÚ]MERO\s+DE\s+C[EÉ]DULA",
+    re.IGNORECASE,
+)
+
+
+def _is_label(text: str) -> bool:
+    return bool(_LABEL_ONLY.match(text) or _LABEL_WORDS.search(text))
+
+
 def _candidates(lines: list[Line], label: str) -> list[tuple[str, Line]]:
-    """Text that follows `label`: first on the same line, then the line to its right, then below."""
+    """Text that follows `label`: first on the same line, then the nearest line to its right, then the
+    nearest below. A neighbouring line that is itself a label is not a value: when this label's value
+    was not read, the next field's value must not be handed to it."""
     for ln in lines:
         if not (m := re.search(label, ln.text, re.IGNORECASE)):
             continue
@@ -120,11 +133,12 @@ def _candidates(lines: list[Line], label: str) -> list[tuple[str, Line]]:
         if re.search(r"\w", rest := _PUNCT.sub("", ln.text[m.end() :])):
             found.append((rest.strip(), ln))
         right = [c for c in lines if c is not ln and c.x > ln.x and abs(c.y - ln.y) <= 0.6 * max(ln.h, c.h)]
-        below = [c for c in lines if c.y > ln.y + 0.5 * ln.h and not _LABEL_ONLY.match(c.text)]
+        below = [c for c in lines if c.y > ln.y + 0.5 * ln.h]
         for pool, key in ((right, lambda c: c.x), (below, lambda c: c.y)):
             if pool:
                 nearest = min(pool, key=key)
-                found.append((nearest.text.strip(), nearest))
+                if not _is_label(nearest.text):
+                    found.append((nearest.text.strip(), nearest))
                 break
         return found
     return []
