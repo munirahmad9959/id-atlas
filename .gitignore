@@ -19,3 +19,6 @@ wheels/
 
 # Real identity documents must never be committed; keep local samples here.
 /samples/
+
+# Local-only tests that need real specimen images (see the docstring in the file).
+/tests/test_specimens.py
