@@ -1,27 +1,7 @@
 import pytest
+from factories import TD1, TD3, make_td3
 
 from id_atlas import mrz
-
-# The ICAO 9303 specimen documents (Anna Maria Eriksson of Utopia), valid by construction.
-TD3 = [
-    "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-    "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
-]
-TD1 = [
-    "I<UTOD231458907<<<<<<<<<<<<<<<",
-    "7408122F1204159UTO<<<<<<<<<<<6",
-    "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-]
-
-
-def make_td3(*, number="X1234567", nationality="CRI", dob="900101", sex="F", expiry="300101", personal=""):
-    """A TD3 passport MRZ with correct check digits, for cases the ICAO specimen does not cover."""
-    cd = mrz.check_digit
-    line1 = "P<CRIPRUEBA<<ANA<MARIA".ljust(44, "<")
-    num, pers = number.ljust(9, "<"), personal.ljust(14, "<")
-    body = f"{num}{cd(num)}{nationality}{dob}{cd(dob)}{sex}{expiry}{cd(expiry)}{pers}{cd(pers) if personal else '<'}"
-    composite = body[0:10] + body[13:20] + body[21:43]
-    return [line1, body + str(cd(composite))]
 
 
 def test_check_digit_icao_examples():
