@@ -8,6 +8,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ID_ATLAS_", env_file=".env", extra="ignore")
 
+    # Where `id-atlas` listens. Loopback by default: set 0.0.0.0 deliberately (for example in Docker).
+    host: str = "127.0.0.1"
+    port: int = 8000
     # When set, every /v1 request must send it in the X-API-Key header.
     api_key: str | None = None
     max_upload_bytes: int = 10 * 1024 * 1024
