@@ -237,6 +237,14 @@ TEMPLATE_PARSERS = {
 # --- Cross-checks and other sources -------------------------------------------------------------
 
 _LICENSE_BARCODE = re.compile(r"^([A-Z]{1,3})(\d{6,12})([A-E]\d?)$")
+# Characters the OCR mistakes for one another (I/l/1, O/0, B/8...), folded together when comparing.
+_CONFUSABLE = str.maketrans(
+    {"O": "0", "Q": "0", "D": "0", "I": "1", "L": "1", "B": "8", "S": "5", "Z": "2", "G": "6"}
+)
+
+
+def _fold(text: str) -> str:
+    return re.sub(r"[\s-]", "", text.upper()).translate(_CONFUSABLE)
 
 
 def reconcile_license_barcode(
@@ -244,8 +252,10 @@ def reconcile_license_barcode(
 ) -> tuple[dict[str, Field], list[str]]:
     """Cross-check a license against its PDF417, which carries the number followed by the license type.
 
-    Seen on one real license only, so a barcode of any other shape is ignored. Agreement raises the
-    confidence of both fields; a disagreement never overwrites OCR, it only asks for review.
+    Seen on one real license only, so a barcode of any other shape is ignored. A printed value that
+    agrees with the barcode, allowing for letters the OCR confuses (an I read as l), is replaced by the
+    machine-read text and made confident; one that truly differs is never overwritten, it only asks
+    for review.
     """
     fields = dict(fields)
     reasons = []
@@ -253,16 +263,15 @@ def reconcile_license_barcode(
         if not (m := _LICENSE_BARCODE.match(re.sub(r"[\s-]", "", text.upper()))):
             continue
         prefix, digits, license_type = m.groups()
-        expected = {
-            "license_number": (prefix + digits, f"{prefix}-{digits}"),
-            "license_type": (license_type, license_type),
-        }
-        for name, (compact, display) in expected.items():
+        expected = {"license_number": f"{prefix}-{digits}", "license_type": license_type}
+        for name, display in expected.items():
             field = fields.get(name)
             if field is None or not field.value:
                 fields[name] = Field(value=display, raw=text, confidence=0.99)
-            elif re.sub(r"[\s-]", "", field.value.upper()) == compact:
-                fields[name] = field.model_copy(update={"confidence": max(field.confidence, 0.99)})
+            elif _fold(field.value) == _fold(display):
+                fields[name] = field.model_copy(
+                    update={"value": display, "confidence": max(field.confidence, 0.99)}
+                )
             else:
                 reasons.append(f"barcode_mismatch:{name}")
         break

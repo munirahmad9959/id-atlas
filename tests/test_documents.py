@@ -269,6 +269,35 @@ def test_matching_barcode_raises_confidence():
     assert fields["license_type"].confidence == 0.99 and fields["license_number"].confidence == 0.99
 
 
+@pytest.mark.parametrize(
+    "printed_number, printed_kind",
+    [
+        ("Cl-123456789", "B1"),
+        ("C1-123456789", "B1"),
+        ("CI-I23456789", "B1"),
+        ("CI-123456789", "81"),
+        ("CI123456789", "B1"),
+    ],
+    ids=["I-read-as-l", "I-read-as-1", "1-read-as-I", "B-read-as-8", "dash-missing"],
+)
+def test_ocr_letter_confusions_still_agree_with_the_barcode(printed_number, printed_kind):
+    fields, reasons = documents.reconcile_license_barcode(
+        license_fields(number=printed_number, kind=printed_kind), ["CI123456789B1"]
+    )
+    assert reasons == []
+    assert (
+        fields["license_number"].value == "CI-123456789" and fields["license_type"].value == "B1"
+    )  # the barcode's text
+    assert fields["license_number"].confidence == 0.99 and fields["license_type"].confidence == 0.99
+    assert fields["license_number"].raw == printed_number  # what was printed is still on record
+
+
+def test_a_real_difference_is_not_hidden_by_the_confusion_tolerance():
+    for number in ("CI-123456780", "CI-123456798", "XX-123456789"):
+        _, reasons = documents.reconcile_license_barcode(license_fields(number=number), ["CI123456789B1"])
+        assert reasons == ["barcode_mismatch:license_number"], number
+
+
 def test_barcode_never_lowers_confidence():
     original = license_fields()
     original["license_number"] = original["license_number"].model_copy(update={"confidence": 0.999})
