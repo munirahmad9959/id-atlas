@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Environments and secrets
+.venv
+.env
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+
+# Real identity documents must never be committed; keep local samples here.
+/samples/
