@@ -53,8 +53,9 @@ def test_the_real_environment_beats_the_dotenv_file(tmp_path, monkeypatch):
     assert Settings().api_key == "from-env"
 
 
-def test_the_old_ocr_prefix_is_not_read(monkeypatch):
-    monkeypatch.setenv("OCR_API_KEY", "legacy")
+def test_variables_without_the_id_atlas_prefix_are_not_read(monkeypatch):
+    monkeypatch.setenv("API_KEY", "unprefixed")
+    monkeypatch.setenv("OCR_API_KEY", "other-prefix")
     assert Settings().api_key is None
 
 

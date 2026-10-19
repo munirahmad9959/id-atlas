@@ -2,12 +2,11 @@
 
 import hmac
 from contextlib import asynccontextmanager
-from importlib.metadata import version
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 
-from . import documents, engine, pipeline
+from . import __version__, documents, engine, pipeline
 from .config import Settings, get_settings
 from .documents import UnknownDocumentType
 from .imaging import InvalidImage
@@ -22,7 +21,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="id-atlas",
-    version=version("id-atlas"),
+    version=__version__,
     description="Lightweight, self-hosted OCR for identity documents. Results are hints for a human reviewer.",
     lifespan=lifespan,
 )

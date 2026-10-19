@@ -6,6 +6,16 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "munirahmad9959" }]
+keywords = ["ocr", "identity-document", "id-card", "passport", "mrz", "kyc", "self-hosted", "onnx"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Framework :: FastAPI",
+]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.143.0",

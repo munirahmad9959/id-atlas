@@ -42,6 +42,23 @@ def test_health(client):
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_the_version_falls_back_when_the_package_is_not_installed(monkeypatch):
+    import importlib
+    from importlib import metadata
+
+    import id_atlas
+
+    def missing(_name):
+        raise metadata.PackageNotFoundError
+
+    monkeypatch.setattr(metadata, "version", missing)
+    try:
+        assert importlib.reload(id_atlas).__version__ == "0.0.0+unknown"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(id_atlas)
+
+
 def test_the_documented_routes(client):
     spec = client.get("/openapi.json").json()
     assert set(spec["paths"]) == {"/health", "/v1/documents", "/v1/extract", "/v1/extract/document"}
