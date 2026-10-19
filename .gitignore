@@ -17,6 +17,9 @@ wheels/
 # OS
 .DS_Store
 
+# Personal Claude Code instructions
+CLAUDE.local.md
+
 # Real identity documents must never be committed; keep local samples here.
 /samples/
 
