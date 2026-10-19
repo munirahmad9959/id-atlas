@@ -10,9 +10,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencies first, so code changes do not invalidate this layer. README.md and LICENSE are listed
-# in pyproject.toml, so the build needs them.
-COPY pyproject.toml uv.lock .python-version README.md LICENSE ./
+# Dependencies first, so code changes do not invalidate this layer. README.md, LICENSE and NOTICE are
+# listed in pyproject.toml, so the build needs them.
+COPY pyproject.toml uv.lock .python-version README.md LICENSE NOTICE ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 

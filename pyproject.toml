@@ -1,11 +1,11 @@
 [project]
 name = "id-atlas"
 version = "0.1.0"
-description = "Lightweight, self-hosted OCR for identity documents, starting with Costa Rica"
+description = "Lightweight, self-hosted OCR for identity documents, one module per country"
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
-authors = [{ name = "munirahmad9959" }]
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Munir Ahmad" }]
 keywords = ["ocr", "identity-document", "id-card", "passport", "mrz", "kyc", "self-hosted", "onnx"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -31,6 +31,11 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
     "zxing-cpp>=3.1.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/munirahmad9959/id-atlas"
+Issues = "https://github.com/munirahmad9959/id-atlas/issues"
+Source = "https://github.com/munirahmad9959/id-atlas"
 
 [project.scripts]
 id-atlas = "id_atlas.cli:main"

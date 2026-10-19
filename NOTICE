@@ -1,0 +1,30 @@
+id-atlas
+Copyright 2026 Munir Ahmad
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party software
+--------------------
+id-atlas does not contain third-party code or model files in this repository. It depends on packages that
+are installed separately and that keep their own licences, all permissive. The main ones:
+
+  RapidOCR        Apache-2.0   https://github.com/RapidAI/RapidOCR
+  ONNX Runtime    MIT          https://github.com/microsoft/onnxruntime
+  OpenCV          Apache-2.0   https://github.com/opencv/opencv-python
+  zxing-cpp       Apache-2.0   https://github.com/zxing-cpp/zxing-cpp
+  FastAPI         MIT          https://github.com/fastapi/fastapi
+  Pydantic        MIT          https://github.com/pydantic/pydantic
+  Pillow          MIT-CMU      https://github.com/python-pillow/Pillow
+  NumPy           BSD-3-Clause https://github.com/numpy/numpy
+  uvicorn         BSD-3-Clause https://github.com/encode/uvicorn
+
+OCR models
+----------
+Text recognition uses the PP-OCRv6 small detection and recognition models. The weights are copyright
+Baidu and the PaddleOCR rights holders (https://github.com/PaddlePaddle/PaddleOCR), released under
+Apache-2.0, and converted to ONNX and packaged by RapidOCR. RapidOCR documents this in the
+MODEL_LICENSES.md file that ships inside its package.
+
+The model files are installed with the `rapidocr` package and are not committed here. A Docker image built
+from this repository contains them together with their licence files. If you redistribute them yourself,
+keep those licence files and the attribution above, as Apache-2.0 section 4 requires.
