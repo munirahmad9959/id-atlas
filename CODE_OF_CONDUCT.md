@@ -28,9 +28,10 @@ Not acceptable:
 Maintainers may edit or remove comments, commits, issues and pull requests that break this code, and may
 temporarily or permanently block a person from the project.
 
-To report a problem, use GitHub's **Report content** option on the comment or issue, or contact the
-maintainer (`@munirahmad9959`) through the private channel described in [SECURITY.md](SECURITY.md). Reports
-are handled privately and fairly.
+To report a problem privately, open a private report in the **Security** tab of this repository (**Report a
+vulnerability**) and start it with "Conduct report". It reaches the maintainer (`@munirahmad9959`) only, and
+no email address is needed. For one abusive comment you can also use GitHub's **Report content** option.
+Reports are handled privately and fairly.
 
 ## Scope
 

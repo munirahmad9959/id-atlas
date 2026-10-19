@@ -4,9 +4,10 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-10-19
 
-First version.
+First version. An early release: the Costa Rican parsers are checked on very few real documents (see the
+README, "Limitations").
 
 ### Added
 
