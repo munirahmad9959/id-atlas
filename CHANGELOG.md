@@ -22,6 +22,7 @@ First version.
 - Language-neutral text helpers (`Style`, `Reader`): English month names and year-first dates by default,
   with label words, extra months and date joiners supplied per country.
 - Dockerfile and probe scripts for local diagnosis.
+- GitHub Actions CI with three checks: `lint`, `test` and `docker`.
 - Contributing guide, code of conduct, security policy, notice file, and issue and pull request templates.
 
 ### Notes

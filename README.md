@@ -1,5 +1,6 @@
 # id-atlas
 
+[![CI](https://github.com/munirahmad9959/id-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/munirahmad9959/id-atlas/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://docs.astral.sh/ruff/)

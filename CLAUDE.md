@@ -38,3 +38,5 @@ uv run python scripts/probe_document.py front.jpg [back.jpg] [document_type]   #
 - Conventional commits: `feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `docs:`,
   `chore:`. Comments say why, not what. Ruff line length is 110.
 - Add or update tests with every behaviour change, and keep `README.md` and `CHANGELOG.md` true to the code.
+- CI (`.github/workflows/ci.yml`) runs `lint`, `test` and `docker`; they are the required checks on `main`, so
+  keep those job names, and never add path filters to the workflow.

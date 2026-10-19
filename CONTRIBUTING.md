@@ -36,8 +36,13 @@ To run the service: `uv run id-atlas` (http://127.0.0.1:8000, docs at `/docs`).
 2. Fork the repository and create a branch from `main`.
 3. Make your change. Add or update tests. Keep the change focused: one topic per pull request.
 4. Run the tests and `ruff` (above). Both must pass.
-5. Open a pull request and fill in the template. Say how you tested it.
-6. A maintainer reviews it. Please be ready to adjust. Pull requests are squash-merged.
+5. Open a pull request and fill in the template. Say how you tested it. Give it a title in the commit style
+   below (for example `feat(countries): add Pakistani CNIC`): a pull request is squash-merged, and its title
+   becomes the one commit message that lands on `main`.
+6. CI runs on your pull request: `lint` (ruff and the lockfile), `test` (the full suite) and `docker` (the
+   image builds and answers). All three must pass. A first-time contributor's run waits for a maintainer to
+   approve it.
+7. A maintainer reviews it. Please be ready to adjust.
 
 ## Commit style
 
