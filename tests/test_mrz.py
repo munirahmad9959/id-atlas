@@ -1,5 +1,5 @@
 import pytest
-from factories import TD1, TD3, make_td3
+from factories import TD1, TD2, TD3, make_td3
 
 from id_atlas import mrz
 
@@ -25,6 +25,36 @@ def test_td1_parses_and_validates():
     assert result and result.format == "TD1" and result.valid
     assert result.document_number == "D23145890" and result.given_names == "ANNA MARIA"
     assert result.birth_date == "1974-08-12" and result.expiry_date == "2012-04-15"
+
+
+def test_td2_parses_and_validates():
+    result = mrz.read(TD2)
+    assert result and result.format == "TD2" and result.valid
+    assert result.document_code == "I" and result.issuing_country == "UTO" and result.nationality == "UTO"
+    assert result.surname == "ERIKSSON" and result.given_names == "ANNA MARIA"
+    assert result.document_number == "D23145890" and result.personal_number == ""
+    assert result.birth_date == "1974-08-12" and result.expiry_date == "2012-04-15" and result.sex == "F"
+    assert set(result.checks) == {"document_number", "birth_date", "expiry_date", "composite"}
+
+
+def test_td2_is_not_mistaken_for_the_other_formats():
+    assert mrz.read(TD3).format == "TD3" and mrz.read(TD1).format == "TD1"
+    assert mrz.locate(TD2)[0] == "TD2"
+    assert mrz.read([TD2[0]]) is None  # one line alone is not an MRZ
+
+
+def test_td2_detects_a_corrupted_digit():
+    result = mrz.read([TD2[0], TD2[1].replace("7408122", "7408123")])
+    assert result and not result.valid and not result.checks["birth_date"]
+
+
+def test_td2_optional_data_is_read_and_covered_by_the_composite_digit():
+    cd = mrz.check_digit
+    body = "D231458907UTO7408122F1204159AB12345"
+    line2 = body + str(cd(body[0:10] + body[13:20] + body[21:35]))
+    result = mrz.read([TD2[0], line2])
+    assert result and result.valid and result.personal_number == "AB12345"
+    assert not mrz.read([TD2[0], line2.replace("AB12345", "AB12346")]).valid
 
 
 def test_td3_repairs_ocr_confusion_in_alphabetic_fields():
@@ -57,7 +87,10 @@ def test_td3_pads_slightly_short_lines():
 
 
 def test_lines_too_far_off_length_are_not_an_mrz():
-    assert mrz.read([TD3[0][:-10], TD3[1][:-10]]) is None
+    assert mrz.read([TD3[0][:-20], TD3[1][:-20]]) is None
+    # Ten characters short is close to a TD2 length: read as one, it can never pass its check digits.
+    shortened = mrz.read([TD3[0][:-10], TD3[1][:-10]])
+    assert shortened is None or not shortened.valid
 
 
 def test_corrupted_digit_is_detected():

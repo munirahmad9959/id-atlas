@@ -21,6 +21,11 @@ TD1 = [
     "7408122F1204159UTO<<<<<<<<<<<6",
     "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
 ]
+# The two-line, 36-character format (ID cards and visas): the same person and document number as TD1.
+TD2 = [
+    "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
+    "D231458907UTO7408122F1204159<<<<<<<6",
+]
 
 
 def make_td3(*, number="X1234567", nationality="CRI", dob="900101", sex="F", expiry="300101", personal=""):

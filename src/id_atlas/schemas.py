@@ -21,7 +21,7 @@ class SideResult(BaseModel):
 
 
 class Mrz(BaseModel):
-    format: Literal["TD1", "TD3"]
+    format: Literal["TD1", "TD2", "TD3"]
     lines: list[str]
     document_code: str
     issuing_country: str

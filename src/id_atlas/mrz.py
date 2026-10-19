@@ -9,7 +9,8 @@ _WEIGHTS = (7, 3, 1)
 _TO_DIGIT = str.maketrans({"O": "0", "Q": "0", "D": "0", "I": "1", "B": "8", "S": "5", "Z": "2", "G": "6"})
 _TO_ALPHA = str.maketrans({"0": "O", "1": "I", "8": "B", "5": "S", "2": "Z", "6": "G"})
 _FILLERS = str.maketrans({"«": "<", "‹": "<", "〈": "<"})
-_FORMATS = {"TD3": (2, 44), "TD1": (3, 30)}
+# Format -> (number of lines, characters per line)
+_FORMATS = {"TD3": (2, 44), "TD1": (3, 30), "TD2": (2, 36)}
 _LENGTH_SLACK = 4
 
 
@@ -145,9 +146,42 @@ def parse_td1(lines: list[str]) -> Mrz:
     )
 
 
+def parse_td2(lines: list[str]) -> Mrz:
+    l1, l2 = lines
+    number, number_ok = _verified(l2[0:9], l2[9])
+    _, birth_ok = _verified(l2[13:19], l2[19])
+    _, expiry_ok = _verified(l2[21:27], l2[27])
+    composite = l2[0:10] + l2[13:20] + l2[21:35]
+    _, composite_ok = _verified(composite, l2[35])
+    surname, given = _names(l1[5:36])
+    return _build(
+        "TD2",
+        lines,
+        document_code=l1[0:2].replace("<", "").translate(_TO_ALPHA),
+        issuing_country=l1[2:5].translate(_TO_ALPHA).replace("<", ""),
+        surname=surname,
+        given_names=given,
+        document_number=number.rstrip("<"),
+        nationality=l2[10:13].translate(_TO_ALPHA).replace("<", ""),
+        birth_date=_date(l2[13:19], birth=True),
+        sex=_sex(l2[20]),
+        expiry_date=_date(l2[21:27], birth=False),
+        personal_number=l2[28:35].strip("<"),
+        checks={
+            "document_number": number_ok,
+            "birth_date": birth_ok,
+            "expiry_date": expiry_ok,
+            "composite": composite_ok,
+        },
+    )
+
+
+_PARSERS = {"TD3": parse_td3, "TD1": parse_td1, "TD2": parse_td2}
+
+
 def read(texts: list[str]) -> Mrz | None:
     found = locate(texts)
     if not found:
         return None
     fmt, lines = found
-    return parse_td3(lines) if fmt == "TD3" else parse_td1(lines)
+    return _PARSERS[fmt](lines)
