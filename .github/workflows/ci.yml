@@ -1,0 +1,88 @@
+name: CI
+
+# No path filters on purpose: the three jobs below are meant to be required checks, and a workflow that is
+# skipped by a path filter would leave its required check waiting forever.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Nothing here writes to the repository, so the token is read-only.
+permissions:
+  contents: read
+
+# A newer push to the same pull request replaces the older run; runs on main always finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  UV_VERSION: "0.12.15" # the uv the Dockerfile uses
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Install the dev tools
+        run: uv sync --frozen --only-group dev
+      - name: The lockfile matches pyproject.toml
+        run: uv lock --check
+      - name: Lint
+        run: uv run --no-sync ruff check .
+      - name: Formatting
+        run: uv run --no-sync ruff format --check .
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Install from the frozen lockfile
+        run: uv sync --frozen
+      - name: Tests (the real OCR on synthetic documents)
+        run: uv run --no-sync pytest -q --durations=10
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: docker build -t id-atlas:ci .
+      - name: Start it and check that it answers
+        run: |
+          docker run -d --name id-atlas-ci -p 8000:8000 -e ID_ATLAS_API_KEY=ci-key id-atlas:ci
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8000/health >/dev/null && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8000/health
+          # The API key protects /v1 and the listing knows the Costa Rican documents.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/v1/documents)" = 401
+          curl -sf -H 'X-API-Key: ci-key' http://127.0.0.1:8000/v1/documents | grep -q '"cedula"'
+          # The licence files travel with the package inside the image.
+          docker exec id-atlas-ci python -c "import importlib.metadata as m; assert any(str(f).endswith('NOTICE') for f in m.files('id-atlas'))"
+      - name: Container log
+        if: failure()
+        run: docker logs id-atlas-ci
+      - name: Stop the container
+        if: always()
+        run: docker rm -f id-atlas-ci
