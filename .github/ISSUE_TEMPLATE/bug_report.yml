@@ -1,0 +1,50 @@
+name: Bug report
+description: A document was read wrongly, or something crashed
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach real identity documents or paste real values.** Redact them or use a synthetic image.
+        The probe script prints only the shape of each value, so its output is safe to paste:
+        `uv run python scripts/probe_document.py front.jpg back.jpg`
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "0.1.0, or a commit hash"
+    validations:
+      required: true
+  - type: input
+    id: document
+    attributes:
+      label: Country and document
+      description: Which document was it? The `type` from `GET /v1/documents` helps, such as `cedula` or `passport`.
+      placeholder: "Costa Rica, cédula"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Which fields were wrong or missing? Describe their shape, not their real values.
+    validations:
+      required: true
+  - type: textarea
+    id: probe
+    attributes:
+      label: Probe output
+      description: Output of `scripts/probe_document.py` WITHOUT `--show`.
+      render: text
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, CPU, Python version, and whether you used Docker.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I did not include any real identity document, photo or personal data.
+          required: true

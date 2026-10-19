@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/munirahmad9959/id-atlas/discussions
+    about: Ask questions and share ideas in Discussions.
+  - name: Report a security problem
+    url: https://github.com/munirahmad9959/id-atlas/security/advisories/new
+    about: Please report vulnerabilities privately, never in a public issue.
