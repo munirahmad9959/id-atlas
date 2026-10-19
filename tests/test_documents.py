@@ -3,7 +3,7 @@ from factories import TD1, TD3, line, make_td3, stacked
 
 from id_atlas import documents, mrz
 from id_atlas.countries import costa_rica
-from id_atlas.documents.text import parse_date
+from id_atlas.documents.text import parse_date as _parse_date
 from id_atlas.schemas import Field
 
 # --- classification -----------------------------------------------------------------------------
@@ -54,6 +54,11 @@ def test_words_beat_the_mrz():
 )
 def test_side_guess(texts, expected):
     assert documents.side_guess(stacked(*texts)) == expected
+
+
+def parse_date(text: str):
+    """A date as the Spanish-language Costa Rican cards print it."""
+    return _parse_date(text, costa_rica.STYLE)
 
 
 # --- dates --------------------------------------------------------------------------------------

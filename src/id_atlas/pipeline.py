@@ -122,7 +122,7 @@ def _side_reasons(doc_type: str, sides: list[_Side], per_side: list[dict[str, Fi
     elif front.guess == "back" or back.guess == "front":
         reasons.append("sides_possibly_swapped")
 
-    # A field printed on both sides (such as the cédula number) must agree.
+    # A field printed on both sides (such as the ID number) must agree.
     for name in per_side[0].keys() & per_side[1].keys():
         a, b = per_side[0][name].value, per_side[1][name].value
         if a and b and a != b:

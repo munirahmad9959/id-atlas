@@ -7,11 +7,35 @@ until tested on a larger set of real photos.
 import re
 
 from ..documents import DocumentSpec, register
-from ..documents.text import SEP, candidates_after, date_after, present, text_after, text_match
+from ..documents.text import SEP, Reader, Style, fold_confusables, present
 from ..engine import Line
 from ..schemas import Field
 
 COUNTRY = "CRI"
+
+# Cards are printed in Spanish: its months, the "de" in "5 de marzo de 2030", and the words that label a field.
+STYLE = Style(
+    label_words=(
+        r"NOMBRE|APELLIDO|NACIMIENTO|F\.\s*NAC|VENC|EXPEDICI|DOMICILIO|PADRE|MADRE"
+        r"|N[UÚ]MERO\s+DE\s+C[EÉ]DULA"
+    ),
+    months={
+        "ENE": 1,
+        "FEB": 2,
+        "MAR": 3,
+        "ABR": 4,
+        "MAY": 5,
+        "JUN": 6,
+        "JUL": 7,
+        "AGO": 8,
+        "SEP": 9,
+        "SET": 9,
+        "OCT": 10,
+        "NOV": 11,
+        "DIC": 12,
+    },
+    date_joiners=("DE",),
+)
 
 # --- Cédula de identidad ------------------------------------------------------------------------
 
@@ -22,17 +46,16 @@ _EXPIRY = r"VENC(?:E|IMIENTO)"
 
 def parse_cedula(lines: list[Line]) -> dict[str, Field]:
     # Parents' names, birthplace and electoral address are printed on the card but deliberately not read.
+    read = Reader(lines, STYLE)
     fields = present(
-        given_names=text_after(lines, r"NOMBRE(?!\s*(?:DEL?|DE\s+LA)\b)"),
-        surname1=text_after(lines, r"1\s*[ºo°.]?\s*APELLIDO"),
-        surname2=text_after(lines, r"2\s*[ºo°.]?\s*APELLIDO"),
-        birth_date=date_after(lines, _BIRTH),
-        expiry_date=date_after(lines, _EXPIRY),
+        given_names=read.text_after(r"NOMBRE(?!\s*(?:DEL?|DE\s+LA)\b)"),
+        surname1=read.text_after(r"1\s*[ºo°.]?\s*APELLIDO"),
+        surname2=read.text_after(r"2\s*[ºo°.]?\s*APELLIDO"),
+        birth_date=read.date_after(_BIRTH),
+        expiry_date=read.date_after(_EXPIRY),
     )
     # The number is printed unlabeled on the front and labeled on the back.
-    texts = [(t, ln) for t, ln in candidates_after(lines, r"N[UÚ]MERO\s+DE\s+C[EÉ]DULA")] + [
-        (ln.text, ln) for ln in lines
-    ]
+    texts = read.candidates_after(r"N[UÚ]MERO\s+DE\s+C[EÉ]DULA") + [(ln.text, ln) for ln in lines]
     for text, ln in texts:
         if m := _NUMBER.search(text):
             fields["id_number"] = Field(
@@ -46,24 +69,17 @@ def parse_cedula(lines: list[Line]) -> dict[str, Field]:
 
 
 def parse_license(lines: list[Line]) -> dict[str, Field]:
+    read = Reader(lines, STYLE)
     return present(
-        license_number=text_match(lines, r"\b([A-Z]{1,3}-?\d{6,12})\b"),
-        issue_date=date_after(lines, r"EXPEDICI[OÓ]N"),
-        birth_date=date_after(lines, r"NACIMIENTO"),
-        expiry_date=date_after(lines, r"VENCIMIENTO"),
-        license_type=text_match(lines, r"TIPO" + SEP + r"([A-E]\d?)\b"),
+        license_number=read.text_match(r"\b([A-Z]{1,3}-?\d{6,12})\b"),
+        issue_date=read.date_after(r"EXPEDICI[OÓ]N"),
+        birth_date=read.date_after(r"NACIMIENTO"),
+        expiry_date=read.date_after(r"VENCIMIENTO"),
+        license_type=read.text_match(r"TIPO" + SEP + r"([A-E]\d?)\b"),
     )
 
 
 _LICENSE_BARCODE = re.compile(r"^([A-Z]{1,3})(\d{6,12})([A-E]\d?)$")
-# Characters the OCR mistakes for one another (I/l/1, O/0, B/8...), folded together when comparing.
-_CONFUSABLE = str.maketrans(
-    {"O": "0", "Q": "0", "D": "0", "I": "1", "L": "1", "B": "8", "S": "5", "Z": "2", "G": "6"}
-)
-
-
-def _fold(text: str) -> str:
-    return re.sub(r"[\s-]", "", text.upper()).translate(_CONFUSABLE)
 
 
 def reconcile_license_barcode(
@@ -87,7 +103,7 @@ def reconcile_license_barcode(
             field = fields.get(name)
             if field is None or not field.value:
                 fields[name] = Field(value=display, raw=text, confidence=0.99)
-            elif _fold(field.value) == _fold(display):
+            elif fold_confusables(field.value) == fold_confusables(display):
                 fields[name] = field.model_copy(
                     update={"value": display, "confidence": max(field.confidence, 0.99)}
                 )
@@ -101,7 +117,7 @@ def reconcile_license_barcode(
 
 
 def parse_dimex(lines: list[Line]) -> dict[str, Field]:
-    return present(id_number=text_match(lines, r"(?<!\d)(\d{11,12})(?!\d)"))
+    return present(id_number=Reader(lines, STYLE).text_match(r"(?<!\d)(\d{11,12})(?!\d)"))
 
 
 # --- Registration -------------------------------------------------------------------------------

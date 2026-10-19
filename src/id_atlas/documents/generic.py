@@ -9,8 +9,9 @@ from .text import present
 
 _MRZ_REQUIRED = ("document_number", "surname", "given_names", "birth_date", "expiry_date")
 
-# Words that mark a passport page when no MRZ could be read.
-PASSPORT_WORDS = ("PASAPORTE", "PASSPORT")
+# The word "passport" in the main languages of travel documents: marks a passport page when no MRZ could
+# be read. Add a language here when a document needs it.
+PASSPORT_WORDS = ("PASSPORT", "PASAPORTE", "PASSEPORT", "PASSAPORTO", "REISEPASS")
 
 register(
     DocumentSpec(
