@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadF
 
 from . import engine, pipeline
 from .config import Settings, get_settings
+from .documents import UnknownDocumentType
 from .imaging import InvalidImage
 from .schemas import DocumentType, ExtractionResult
 
@@ -70,7 +71,7 @@ def extract_document(
     back_data = _read_upload(back, settings) if back is not None else None
     try:
         return pipeline.extract_document(front_data, back_data, settings, document_type)
-    except InvalidImage as exc:
+    except (InvalidImage, UnknownDocumentType) as exc:
         raise HTTPException(422, str(exc)) from exc
 
 
@@ -88,5 +89,5 @@ def extract(
     """One image, read on its own (no front/back checks)."""
     try:
         return pipeline.extract(_read_upload(file, settings), settings, document_type)
-    except InvalidImage as exc:
+    except (InvalidImage, UnknownDocumentType) as exc:
         raise HTTPException(422, str(exc)) from exc

@@ -2,7 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-DocumentType = Literal["cedula", "passport", "driver_license", "dimex", "id_mrz", "unknown"]
+# The name of a registered document type (see `documents.known_types()`), or "unknown".
+DocumentType = str
 Side = Literal["front", "back"]
 
 

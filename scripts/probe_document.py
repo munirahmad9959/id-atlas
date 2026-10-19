@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from id_atlas.config import Settings
+from id_atlas.documents import known_types
 from id_atlas.pipeline import extract_document
 
 args = sys.argv[1:]
@@ -18,7 +19,7 @@ if not [a for a in args if a != "--show"]:
     sys.exit(__doc__)
 show = "--show" in args
 args = [a for a in args if a != "--show"]
-hint = args.pop() if args and args[-1] in ("cedula", "passport", "driver_license", "dimex") else None
+hint = args.pop() if args and args[-1] in known_types() else None
 front = Path(args[0]).expanduser().read_bytes()
 back = Path(args[1]).expanduser().read_bytes() if len(args) > 1 else None
 

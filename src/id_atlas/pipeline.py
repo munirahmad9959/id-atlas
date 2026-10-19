@@ -8,10 +8,8 @@ import numpy as np
 from . import barcodes, documents, engine, imaging
 from . import mrz as mrz_module
 from .config import Settings
+from .documents.registry import DocumentSpec, UnknownDocumentType
 from .schemas import DocumentType, ExtractionResult, Field, Mrz, Side, SideResult
-
-# Template parsers not yet validated against enough real documents: always ask for review.
-_UNVERIFIED = {"driver_license", "dimex"}
 
 
 @dataclass
@@ -38,11 +36,13 @@ def _read_side(name: Side, data: bytes, settings: Settings) -> _Side:
     return _Side(name, image, lines, mrz, codes, documents.classify(lines, mrz), documents.side_guess(lines))
 
 
-def _side_fields(side: _Side, doc_type: DocumentType) -> dict[str, Field]:
-    if side.mrz and doc_type in ("passport", "id_mrz"):
-        parsed = documents.from_mrz(side.mrz)
+def _side_fields(side: _Side, spec: DocumentSpec | None) -> dict[str, Field]:
+    if spec is None:
+        parsed = {}
+    elif spec.mrz_based:
+        parsed = documents.from_mrz(side.mrz) if side.mrz else {}
     else:
-        parsed = documents.TEMPLATE_PARSERS.get(doc_type, lambda _: {})(side.lines)
+        parsed = spec.parse(side.lines) if spec.parse else {}
     return {k: v.model_copy(update={"side": side.name}) for k, v in parsed.items()}
 
 
@@ -60,6 +60,8 @@ def extract_document(
     not flagged for a missing back.
     """
     started = time.perf_counter()
+    if hint is not None and documents.get(hint) is None:
+        raise UnknownDocumentType(f"unknown document_type: {hint}")
     sides = [_read_side("front", front, settings)]
     if back is not None:
         sides.append(_read_side("back", back, settings))
@@ -68,7 +70,8 @@ def extract_document(
     doc_type: DocumentType = hint or (recognised[0] if recognised else "unknown")
     mrz = next((s.mrz for s in sides if s.mrz), None)
 
-    per_side = [_side_fields(s, doc_type) for s in sides]
+    spec = documents.get(doc_type)
+    per_side = [_side_fields(s, spec) for s in sides]
     fields: dict[str, Field] = {}
     for parsed in per_side:  # the front wins on a tie, but a valid value beats an unreadable one
         for name, field in parsed.items():
@@ -78,8 +81,8 @@ def extract_document(
 
     codes = [code for s in sides for code in s.barcodes]
     barcode_reasons: list[str] = []
-    if doc_type == "driver_license":
-        fields, barcode_reasons = documents.reconcile_license_barcode(fields, codes)
+    if spec and spec.reconcile:
+        fields, barcode_reasons = spec.reconcile(fields, codes)
 
     reasons = _review_reasons(doc_type, fields, mrz, settings) + barcode_reasons
     if check_sides:
@@ -107,7 +110,8 @@ def extract(data: bytes, settings: Settings, hint: DocumentType | None = None) -
 
 def _side_reasons(doc_type: str, sides: list[_Side], per_side: list[dict[str, Field]]) -> list[str]:
     if len(sides) == 1:
-        return ["missing_back_side"] if doc_type in documents.BACK_REQUIRED else []
+        spec = documents.get(doc_type)
+        return ["missing_back_side"] if spec and spec.two_sided else []
 
     front, back = sides
     reasons = []
@@ -129,14 +133,15 @@ def _side_reasons(doc_type: str, sides: list[_Side], per_side: list[dict[str, Fi
 def _review_reasons(
     doc_type: str, fields: dict[str, Field], mrz: Mrz | None, settings: Settings
 ) -> list[str]:
+    spec = documents.get(doc_type)
     reasons = []
     if doc_type == "unknown":
         reasons.append("unknown_document_type")
-    if doc_type in _UNVERIFIED:
+    if spec and not spec.verified:
         reasons.append("template_unverified")
     if mrz and not mrz.valid:
         reasons.append("mrz_checksum_failed")
-    for name in documents.REQUIRED.get(doc_type, ()):
+    for name in spec.required if spec else ():
         field = fields.get(name)
         if field is None:
             reasons.append(f"missing:{name}")
