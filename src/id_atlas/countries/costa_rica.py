@@ -49,8 +49,8 @@ def parse_cedula(lines: list[Line]) -> dict[str, Field]:
     read = Reader(lines, STYLE)
     fields = present(
         given_names=read.text_after(r"NOMBRE(?!\s*(?:DEL?|DE\s+LA)\b)"),
-        surname1=read.text_after(r"1\s*[ºo°.]?\s*APELLIDO"),
-        surname2=read.text_after(r"2\s*[ºo°.]?\s*APELLIDO"),
+        surname=read.text_after(r"1\s*[ºo°.]?\s*APELLIDO"),
+        second_surname=read.text_after(r"2\s*[ºo°.]?\s*APELLIDO"),
         birth_date=read.date_after(_BIRTH),
         expiry_date=read.date_after(_EXPIRY),
     )
@@ -58,7 +58,7 @@ def parse_cedula(lines: list[Line]) -> dict[str, Field]:
     texts = read.candidates_after(r"N[UÚ]MERO\s+DE\s+C[EÉ]DULA") + [(ln.text, ln) for ln in lines]
     for text, ln in texts:
         if m := _NUMBER.search(text):
-            fields["id_number"] = Field(
+            fields["document_number"] = Field(
                 value="".join(m.groups()), raw=m.group(0), confidence=round(ln.score, 3)
             )
             break
@@ -71,11 +71,11 @@ def parse_cedula(lines: list[Line]) -> dict[str, Field]:
 def parse_license(lines: list[Line]) -> dict[str, Field]:
     read = Reader(lines, STYLE)
     return present(
-        license_number=read.text_match(r"\b([A-Z]{1,3}-?\d{6,12})\b"),
+        document_number=read.text_match(r"\b([A-Z]{1,3}-?\d{6,12})\b"),
         issue_date=read.date_after(r"EXPEDICI[OÓ]N"),
         birth_date=read.date_after(r"NACIMIENTO"),
         expiry_date=read.date_after(r"VENCIMIENTO"),
-        license_type=read.text_match(r"TIPO" + SEP + r"([A-E]\d?)\b"),
+        license_category=read.text_match(r"TIPO" + SEP + r"([A-E]\d?)\b"),
     )
 
 
@@ -97,8 +97,8 @@ def reconcile_license_barcode(
     for text in barcodes:
         if not (m := _LICENSE_BARCODE.match(re.sub(r"[\s-]", "", text.upper()))):
             continue
-        prefix, digits, license_type = m.groups()
-        expected = {"license_number": f"{prefix}-{digits}", "license_type": license_type}
+        prefix, digits, license_category = m.groups()
+        expected = {"document_number": f"{prefix}-{digits}", "license_category": license_category}
         for name, display in expected.items():
             field = fields.get(name)
             if field is None or not field.value:
@@ -117,7 +117,7 @@ def reconcile_license_barcode(
 
 
 def parse_dimex(lines: list[Line]) -> dict[str, Field]:
-    return present(id_number=Reader(lines, STYLE).text_match(r"(?<!\d)(\d{11,12})(?!\d)"))
+    return present(document_number=Reader(lines, STYLE).text_match(r"(?<!\d)(\d{11,12})(?!\d)"))
 
 
 # --- Registration -------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ register(
         country=COUNTRY,
         name="Costa Rican driver's license",
         parse=parse_license,
-        required=("license_number", "expiry_date", "license_type"),
+        required=("document_number", "expiry_date", "license_category"),
         front_markers=("Licencia de Conducir",),
         back_markers=("Educación Vial", "Clasificación"),
         any_markers=("COSEVI",),
@@ -143,7 +143,7 @@ register(
         country=COUNTRY,
         name="Costa Rican DIMEX (residence card)",
         parse=parse_dimex,
-        required=("id_number",),
+        required=("document_number",),
         any_markers=("DIMEX", "Documento de Identidad Migratorio"),
         two_sided=True,
     )
@@ -154,7 +154,7 @@ register(
         country=COUNTRY,
         name="Costa Rican cédula de identidad",
         parse=parse_cedula,
-        required=("id_number", "given_names", "surname1", "birth_date", "expiry_date"),
+        required=("document_number", "given_names", "surname", "birth_date", "expiry_date"),
         front_markers=("Cédula de Identidad", "Tribunal Supremo"),
         back_markers=("Domicilio Electoral", "Nombre del Padre", "Nombre de la Madre", "Lugar de Nacimiento"),
         two_sided=True,

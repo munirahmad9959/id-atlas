@@ -90,6 +90,7 @@ def extract_document(
 
     return ExtractionResult(
         document_type=doc_type,
+        country=_country(spec, mrz),
         fields=fields,
         mrz=mrz,
         barcodes=codes,
@@ -101,6 +102,15 @@ def extract_document(
         review_reasons=reasons,
         elapsed_ms=round((time.perf_counter() - started) * 1000),
     )
+
+
+def _country(spec: DocumentSpec | None, mrz: Mrz | None) -> str | None:
+    """The issuing country: the document type's own, else the one its MRZ states (when it reads as a code)."""
+    if spec and spec.country:
+        return spec.country
+    if mrz and len(mrz.issuing_country) == 3 and mrz.issuing_country.isalpha():
+        return mrz.issuing_country
+    return None
 
 
 def extract(data: bytes, settings: Settings, hint: DocumentType | None = None) -> ExtractionResult:

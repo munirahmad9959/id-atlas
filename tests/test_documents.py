@@ -3,6 +3,7 @@ from factories import TD1, TD3, line, make_td3, stacked
 
 from id_atlas import documents, mrz
 from id_atlas.countries import costa_rica
+from id_atlas.documents.fields import FIELD_NAMES
 from id_atlas.documents.text import parse_date as _parse_date
 from id_atlas.schemas import Field
 
@@ -114,14 +115,14 @@ def test_cedula_front_as_printed():
         )
     )
     assert {k: v.value for k, v in fields.items()} == {
-        "id_number": "199999999",
+        "document_number": "199999999",
         "given_names": "ANA MARIA",
-        "surname1": "PRUEBA",
-        "surname2": "MUESTRA",
+        "surname": "PRUEBA",
+        "second_surname": "MUESTRA",
         "birth_date": "1990-01-12",
         "expiry_date": "2030-03-05",
     }
-    assert fields["id_number"].raw == "1 9999 9999"
+    assert fields["document_number"].raw == "1 9999 9999"
 
 
 def test_cedula_back_with_labels():
@@ -137,7 +138,7 @@ def test_cedula_back_with_labels():
         )
     )
     assert {k: v.value for k, v in fields.items()} == {
-        "id_number": "199999999",
+        "document_number": "199999999",
         "birth_date": "1990-01-12",
         "expiry_date": "2030-03-05",
     }
@@ -170,7 +171,7 @@ def test_value_to_the_right_of_the_label():
         line("PRUEBA", x=200, y=141),
     ]
     fields = costa_rica.parse_cedula(lines)
-    assert fields["given_names"].value == "ANA" and fields["surname1"].value == "PRUEBA"
+    assert fields["given_names"].value == "ANA" and fields["surname"].value == "PRUEBA"
 
 
 def test_a_label_is_not_mistaken_for_the_next_labels_value():
@@ -182,7 +183,7 @@ def test_a_label_is_not_mistaken_for_the_next_labels_value():
 def test_a_missing_name_does_not_borrow_the_next_rows_value():
     fields = costa_rica.parse_cedula(stacked("Nombre:", "1ºApellido: PRUEBA", "2ºApellido: MUESTRA"))
     assert "given_names" not in fields
-    assert fields["surname1"].value == "PRUEBA" and fields["surname2"].value == "MUESTRA"
+    assert fields["surname"].value == "PRUEBA" and fields["second_surname"].value == "MUESTRA"
 
 
 def test_a_missing_value_does_not_borrow_across_a_gap_either():
@@ -203,7 +204,7 @@ def test_field_confidence_comes_from_the_line_that_holds_the_value():
 
 @pytest.mark.parametrize("text", ["099999999", "1 9999 99999", "12 345", "tel 8888-8888", "1999999999"])
 def test_things_that_are_not_a_cedula_number(text):
-    assert "id_number" not in costa_rica.parse_cedula(stacked(text))
+    assert "document_number" not in costa_rica.parse_cedula(stacked(text))
 
 
 def test_nothing_found_means_no_fields():
@@ -228,17 +229,17 @@ def test_license_front():
         )
     )
     assert {k: v.value for k, v in fields.items()} == {
-        "license_number": "CI-123456789",
+        "document_number": "CI-123456789",
         "issue_date": "2020-02-01",
         "birth_date": "1990-01-12",
         "expiry_date": "2030-02-01",
-        "license_type": "B1",
+        "license_category": "B1",
     }
 
 
 def test_license_number_without_a_dash_and_other_types():
     fields = costa_rica.parse_license(stacked("CI123456789", "Tipo: A"))
-    assert fields["license_number"].value == "CI123456789" and fields["license_type"].value == "A"
+    assert fields["document_number"].value == "CI123456789" and fields["license_category"].value == "A"
 
 
 def test_license_missing_pieces_are_absent():
@@ -250,7 +251,7 @@ def test_license_missing_pieces_are_absent():
 
 @pytest.mark.parametrize("number", ["155812345678", "15581234567"])
 def test_dimex_number_has_eleven_or_twelve_digits(number):
-    assert costa_rica.parse_dimex(stacked("DIMEX", number))["id_number"].value == number
+    assert costa_rica.parse_dimex(stacked("DIMEX", number))["document_number"].value == number
 
 
 @pytest.mark.parametrize("text", ["1558123456", "1558123456789", "no number"])
@@ -263,15 +264,15 @@ def test_dimex_rejects_other_lengths(text):
 
 def license_fields(number="CI-000000000", kind="B1", kind_confidence=0.78) -> dict[str, Field]:
     return {
-        "license_number": Field(value=number, raw=number, confidence=0.97, side="front"),
-        "license_type": Field(value=kind, raw=kind, confidence=kind_confidence, side="front"),
+        "document_number": Field(value=number, raw=number, confidence=0.97, side="front"),
+        "license_category": Field(value=kind, raw=kind, confidence=kind_confidence, side="front"),
     }
 
 
 def test_matching_barcode_raises_confidence():
     fields, reasons = costa_rica.reconcile_license_barcode(license_fields(), ["CI000000000B1"])
     assert reasons == []
-    assert fields["license_type"].confidence == 0.99 and fields["license_number"].confidence == 0.99
+    assert fields["license_category"].confidence == 0.99 and fields["document_number"].confidence == 0.99
 
 
 @pytest.mark.parametrize(
@@ -291,46 +292,46 @@ def test_ocr_letter_confusions_still_agree_with_the_barcode(printed_number, prin
     )
     assert reasons == []
     assert (
-        fields["license_number"].value == "CI-123456789" and fields["license_type"].value == "B1"
+        fields["document_number"].value == "CI-123456789" and fields["license_category"].value == "B1"
     )  # the barcode's text
-    assert fields["license_number"].confidence == 0.99 and fields["license_type"].confidence == 0.99
-    assert fields["license_number"].raw == printed_number  # what was printed is still on record
+    assert fields["document_number"].confidence == 0.99 and fields["license_category"].confidence == 0.99
+    assert fields["document_number"].raw == printed_number  # what was printed is still on record
 
 
 def test_a_real_difference_is_not_hidden_by_the_confusion_tolerance():
     for number in ("CI-123456780", "CI-123456798", "XX-123456789"):
         _, reasons = costa_rica.reconcile_license_barcode(license_fields(number=number), ["CI123456789B1"])
-        assert reasons == ["barcode_mismatch:license_number"], number
+        assert reasons == ["barcode_mismatch:document_number"], number
 
 
 def test_barcode_never_lowers_confidence():
     original = license_fields()
-    original["license_number"] = original["license_number"].model_copy(update={"confidence": 0.999})
+    original["document_number"] = original["document_number"].model_copy(update={"confidence": 0.999})
     fields, _ = costa_rica.reconcile_license_barcode(original, ["CI000000000B1"])
-    assert fields["license_number"].confidence == 0.999
+    assert fields["document_number"].confidence == 0.999
 
 
 def test_disagreement_asks_for_review_without_overwriting():
     fields, reasons = costa_rica.reconcile_license_barcode(license_fields(kind="B2"), ["CI000000000B1"])
-    assert reasons == ["barcode_mismatch:license_type"]
-    assert fields["license_type"].value == "B2" and fields["license_type"].confidence == 0.78
+    assert reasons == ["barcode_mismatch:license_category"]
+    assert fields["license_category"].value == "B2" and fields["license_category"].confidence == 0.78
 
     _, reasons = costa_rica.reconcile_license_barcode(
         license_fields(number="CI-111111111"), ["CI000000000B1"]
     )
-    assert reasons == ["barcode_mismatch:license_number"]
+    assert reasons == ["barcode_mismatch:document_number"]
 
 
 def test_missing_fields_are_filled_from_the_barcode():
     fields, reasons = costa_rica.reconcile_license_barcode({}, ["CI000000000B1"])
     assert reasons == []
-    assert fields["license_number"].value == "CI-000000000" and fields["license_type"].value == "B1"
-    assert fields["license_number"].side is None  # it did not come from either printed side
+    assert fields["document_number"].value == "CI-000000000" and fields["license_category"].value == "B1"
+    assert fields["document_number"].side is None  # it did not come from either printed side
 
 
 def test_barcode_text_is_normalised_before_comparing():
     fields, reasons = costa_rica.reconcile_license_barcode(license_fields(), [" ci-000000000 b1 "])
-    assert reasons == [] and fields["license_type"].confidence == 0.99
+    assert reasons == [] and fields["license_category"].confidence == 0.99
 
 
 @pytest.mark.parametrize(
@@ -345,7 +346,7 @@ def test_barcodes_of_another_shape_are_ignored(barcodes):
 def test_the_input_is_not_modified():
     original = license_fields()
     costa_rica.reconcile_license_barcode(original, ["CI000000000B1"])
-    assert original["license_type"].confidence == 0.78
+    assert original["license_category"].confidence == 0.78
 
 
 def test_only_the_first_recognised_barcode_counts():
@@ -400,3 +401,27 @@ def test_every_required_field_is_one_a_parser_can_produce(doc):
     }[doc]
     spec = documents.get(doc)
     assert set(spec.required) <= set(spec.parse(sample))
+
+
+def test_parsers_only_produce_canonical_field_names():
+    samples = {
+        "cedula": stacked(
+            "1 9999 9999",
+            "Nombre: ANA",
+            "1ºApellido: PRUEBA",
+            "2ºApellido: MUESTRA",
+            "F. Nac: 12/01/1990 Vence: 05/03/2030",
+        ),
+        "driver_license": stacked(
+            "CI-123456789",
+            "Expedición 01-02-2020",
+            "Nacimiento 12-01-1990",
+            "Vencimiento 01-02-2030",
+            "Tipo: B1",
+        ),
+        "dimex": stacked("155812345678"),
+    }
+    for doc, lines in samples.items():
+        produced = set(documents.get(doc).parse(lines))
+        assert produced and produced <= set(FIELD_NAMES), (doc, produced - set(FIELD_NAMES))
+    assert set(documents.from_mrz(mrz.read(TD3))) <= set(FIELD_NAMES)

@@ -56,11 +56,11 @@ def test_a_complete_cedula_needs_no_review(cedula):
     assert cedula.review_reasons == [] and cedula.needs_review is False
     assert values(cedula) == {
         "given_names": "ANA MARIA",
-        "surname1": "PRUEBA",
-        "surname2": "MUESTRA",
+        "surname": "PRUEBA",
+        "second_surname": "MUESTRA",
         "birth_date": "1990-01-12",
         "expiry_date": "2030-03-05",
-        "id_number": "199999999",
+        "document_number": "199999999",
     }
 
 
@@ -89,9 +89,11 @@ def test_a_complete_license_is_flagged_only_because_its_template_is_unvalidated(
 def test_the_license_barcode_confirms_and_replaces_the_printed_text(licence):
     assert licence.barcodes == ["CI123456789B1"]
     # The OCR may read the letter I as an l; the machine-read barcode text is what ends up in the result.
-    assert licence.fields["license_number"].value == "CI-123456789"
-    assert licence.fields["license_type"].value == "B1"
-    assert licence.fields["license_number"].confidence == licence.fields["license_type"].confidence == 0.99
+    assert licence.fields["document_number"].value == "CI-123456789"
+    assert licence.fields["license_category"].value == "B1"
+    assert (
+        licence.fields["document_number"].confidence == licence.fields["license_category"].confidence == 0.99
+    )
 
 
 # --- combining the two sides --------------------------------------------------------------------
@@ -100,7 +102,7 @@ def test_the_license_barcode_confirms_and_replaces_the_printed_text(licence):
 def test_a_valid_value_beats_an_unreadable_one():
     result = read(encode(cedula_front(birth="00/00/0000")), CEDULA_BACK)
     assert result.fields["birth_date"].value == "1990-01-12" and result.fields["birth_date"].side == "back"
-    assert result.fields["id_number"].side == "front"
+    assert result.fields["document_number"].side == "front"
     assert result.review_reasons == []
 
 
@@ -112,8 +114,8 @@ def test_the_front_wins_a_disagreement_and_the_conflict_is_flagged():
 
 def test_conflicting_numbers_between_the_sides_are_flagged():
     result = read(CEDULA_FRONT, encode(cedula_back(number="2-3333-4444")))
-    assert "field_conflict:id_number" in result.review_reasons
-    assert result.fields["id_number"].value == "199999999"  # the front's
+    assert "field_conflict:document_number" in result.review_reasons
+    assert result.fields["document_number"].value == "199999999"  # the front's
 
 
 def test_a_blank_back_is_not_a_problem():
@@ -161,14 +163,14 @@ def test_the_same_picture_twice_is_flagged():
 
 def test_a_barcode_that_disagrees_is_flagged_and_does_not_overwrite():
     result = read(encode(license_front(barcode_text="CI123456789B2")), LICENSE_BACK)
-    assert "barcode_mismatch:license_type" in result.review_reasons
-    assert result.fields["license_type"].value == "B1"
+    assert "barcode_mismatch:license_category" in result.review_reasons
+    assert result.fields["license_category"].value == "B1"
 
 
 def test_a_license_without_a_barcode_is_read_from_its_text():
     result = read(encode(license_front(barcode_text=None)), LICENSE_BACK)
     assert result.barcodes == [] and result.review_reasons == ["template_unverified"]
-    assert result.fields["license_number"].value.upper().replace("L", "I") == "CI-123456789"
+    assert result.fields["document_number"].value.upper().replace("L", "I") == "CI-123456789"
 
 
 # --- detection and hints ------------------------------------------------------------------------
@@ -183,7 +185,7 @@ def test_a_page_of_unrelated_text_is_unknown():
 def test_a_hint_overrides_detection():
     result = read(CEDULA_FRONT, None, hint="dimex")
     assert result.document_type == "dimex"
-    assert {"template_unverified", "missing:id_number"} <= set(result.review_reasons)
+    assert {"template_unverified", "missing:document_number"} <= set(result.review_reasons)
 
 
 # --- passports ----------------------------------------------------------------------------------
@@ -214,7 +216,8 @@ def test_upside_down_and_sideways_photos_are_read():
     result = read(upside_down, sideways)
     assert result.document_type == "cedula" and result.review_reasons == []
     assert (
-        result.fields["id_number"].value == "199999999" and result.fields["birth_date"].value == "1990-01-12"
+        result.fields["document_number"].value == "199999999"
+        and result.fields["birth_date"].value == "1990-01-12"
     )
 
 
@@ -231,7 +234,7 @@ def test_large_photos_still_read_text_and_barcode():
         (2700, int(2700 * license_front().height / license_front().width)), Image.LANCZOS
     )
     result = read(encode(big, "JPEG", quality=90), LICENSE_BACK)
-    assert result.barcodes == ["CI123456789B1"] and result.fields["license_type"].value == "B1"
+    assert result.barcodes == ["CI123456789B1"] and result.fields["license_category"].value == "B1"
 
 
 # --- unreadable input ---------------------------------------------------------------------------
@@ -257,18 +260,22 @@ def field(value="x", confidence=0.99) -> Field:
     "doc_type, fields, expected",
     [
         ("unknown", {}, ["unknown_document_type"]),
-        ("dimex", {"id_number": field()}, ["template_unverified"]),
+        ("dimex", {"document_number": field()}, ["template_unverified"]),
         (
             "driver_license",
-            {"license_number": field(), "expiry_date": field(), "license_type": field()},
+            {"document_number": field(), "expiry_date": field(), "license_category": field()},
             ["template_unverified"],
         ),
-        ("dimex", {}, ["template_unverified", "missing:id_number"]),
-        ("dimex", {"id_number": field(None)}, ["template_unverified", "invalid:id_number"]),
-        ("dimex", {"id_number": field(confidence=0.5)}, ["template_unverified", "low_confidence:id_number"]),
+        ("dimex", {}, ["template_unverified", "missing:document_number"]),
+        ("dimex", {"document_number": field(None)}, ["template_unverified", "invalid:document_number"]),
         (
             "dimex",
-            {"id_number": field(confidence=0.85)},
+            {"document_number": field(confidence=0.5)},
+            ["template_unverified", "low_confidence:document_number"],
+        ),
+        (
+            "dimex",
+            {"document_number": field(confidence=0.85)},
             ["template_unverified"],
         ),  # exactly at the threshold passes
     ],
@@ -278,8 +285,16 @@ def test_review_reasons(doc_type, fields, expected):
 
 
 def test_the_review_threshold_is_configurable():
-    fields = {"id_number": field(confidence=0.7)}
-    assert "low_confidence:id_number" in pipeline._review_reasons("dimex", fields, None, settings())
-    assert "low_confidence:id_number" not in pipeline._review_reasons(
+    fields = {"document_number": field(confidence=0.7)}
+    assert "low_confidence:document_number" in pipeline._review_reasons("dimex", fields, None, settings())
+    assert "low_confidence:document_number" not in pipeline._review_reasons(
         "dimex", fields, None, settings(review_below=0.6)
     )
+
+
+def test_the_country_comes_from_the_document_or_its_mrz():
+    cedula = pipeline.extract_document(encode(cedula_front()), None, settings())
+    assert cedula.country == "CRI"
+    passport = pipeline.extract(encode(passport_page(make_td3(nationality="CRI"))), settings())
+    assert passport.document_type == "passport" and passport.country == "CRI"
+    assert pipeline.extract(encode(card_image("hello", "world")), settings()).country is None

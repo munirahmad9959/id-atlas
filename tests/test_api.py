@@ -10,6 +10,7 @@ from factories import (
 )
 from fastapi.testclient import TestClient
 
+from id_atlas import documents
 from id_atlas.api import app
 from id_atlas.config import Settings, get_settings
 from id_atlas.schemas import ExtractionResult
@@ -43,10 +44,43 @@ def test_health(client):
 
 def test_the_documented_routes(client):
     spec = client.get("/openapi.json").json()
-    assert set(spec["paths"]) == {"/health", "/v1/extract", "/v1/extract/document"}
+    assert set(spec["paths"]) == {"/health", "/v1/documents", "/v1/extract", "/v1/extract/document"}
     assert spec["info"]["title"] == "id-atlas" and spec["info"]["version"]
     document = spec["paths"]["/v1/extract/document"]["post"]
     assert {"401", "413", "422"} <= set(document["responses"])
+
+
+# --- the supported documents -------------------------------------------------------------------
+
+
+def test_the_supported_documents_are_listed(client):
+    response = client.get("/v1/documents")
+    assert response.status_code == 200
+    by_type = {d["type"]: d for d in response.json()}
+    assert set(by_type) == set(documents.known_types())
+    assert by_type["cedula"] == {
+        "type": "cedula",
+        "country": "CRI",
+        "name": "Costa Rican cédula de identidad",
+        "two_sided": True,
+        "verified": True,
+        "required": ["document_number", "given_names", "surname", "birth_date", "expiry_date"],
+    }
+    assert by_type["passport"]["country"] is None and by_type["passport"]["two_sided"] is False
+    assert all(d["type"] != "unknown" for d in by_type.values())
+
+
+def test_every_listed_type_can_be_sent_as_a_hint(client):
+    for item in client.get("/v1/documents").json():
+        files = {"front": png("f.png", FRONT)}
+        response = client.post("/v1/extract/document", files=files, data={"document_type": item["type"]})
+        assert response.status_code == 200 and response.json()["document_type"] == item["type"]
+
+
+def test_the_listing_requires_the_key_when_one_is_set(client):
+    configure(api_key="s3cret")
+    assert client.get("/v1/documents").status_code == 401
+    assert client.get("/v1/documents", headers={"X-API-Key": "s3cret"}).status_code == 200
 
 
 # --- reading a document -------------------------------------------------------------------------

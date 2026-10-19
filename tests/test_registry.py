@@ -8,6 +8,7 @@ from factories import line, stacked
 
 from id_atlas import countries, documents
 from id_atlas.documents import registry
+from id_atlas.documents.fields import FIELD_NAMES
 from id_atlas.schemas import Field
 
 
@@ -23,8 +24,8 @@ def spec(**overrides) -> documents.DocumentSpec:
         "type": "testland_id",
         "country": "TST",
         "name": "Testland ID",
-        "parse": lambda lines: {"id_number": Field(value="1", confidence=1.0)},
-        "required": ("id_number",),
+        "parse": lambda lines: {"document_number": Field(value="1", confidence=1.0)},
+        "required": ("document_number",),
     }
     return documents.DocumentSpec(**{**values, **overrides})
 
@@ -80,10 +81,19 @@ def test_a_country_module_dropped_into_the_package_is_found_on_its_own(tmp_path,
             from id_atlas.documents import DocumentSpec, register
 
             register(DocumentSpec(type="fakeland_id", country="FKL", name="Fakeland ID", parse=lambda lines: {},
-                                  required=("id_number",), any_markers=("Republic of Fakeland",)))
+                                  required=("document_number",), any_markers=("Republic of Fakeland",)))
             """
         )
     )
     assert "fakeland_id" in documents.known_types()
     assert documents.classify([line("REPUBLIC OF FAKELAND")], None) == "fakeland_id"
     sys.modules.pop("id_atlas.countries.fakeland", None)
+
+
+def test_a_spec_may_only_require_known_field_names():
+    with pytest.raises(ValueError, match="not in FIELD_NAMES"):
+        spec(required=("id_number",))  # the old name: it is document_number now
+
+
+def test_every_field_name_has_a_description():
+    assert FIELD_NAMES and all(text.strip() for text in FIELD_NAMES.values())

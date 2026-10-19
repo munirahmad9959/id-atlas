@@ -37,8 +37,21 @@ class Mrz(BaseModel):
     valid: bool
 
 
+class DocumentInfo(BaseModel):
+    """One document type this service can read."""
+
+    type: DocumentType
+    country: str | None  # ISO 3166-1 alpha-3 of the issuing country; null for any country (an MRZ document)
+    name: str
+    two_sided: bool
+    verified: bool
+    required: list[str]
+
+
 class ExtractionResult(BaseModel):
     document_type: DocumentType
+    # Issuing country, ISO 3166-1 alpha-3: the document type's own, or the one its MRZ states; null if unknown.
+    country: str | None = None
     fields: dict[str, Field]
     mrz: Mrz | None = None
     barcodes: list[str] = []

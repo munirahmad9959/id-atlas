@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from ..engine import Line
 from ..schemas import Field
+from .fields import FIELD_NAMES
 from .text import squash
 
 Parser = Callable[[list[Line]], dict[str, Field]]
@@ -49,6 +50,8 @@ class DocumentSpec:
     mrz_based: bool = False  # read from the machine-readable zone instead of by a parser
 
     def __post_init__(self) -> None:
+        if unknown := [name for name in self.required if name not in FIELD_NAMES]:
+            raise ValueError(f"{self.type}: required fields not in FIELD_NAMES: {unknown}")
         for name in ("front_markers", "back_markers", "any_markers"):
             object.__setattr__(self, name, tuple(squash(m) for m in getattr(self, name)))
 

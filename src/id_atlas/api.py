@@ -7,11 +7,11 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 
-from . import engine, pipeline
+from . import documents, engine, pipeline
 from .config import Settings, get_settings
 from .documents import UnknownDocumentType
 from .imaging import InvalidImage
-from .schemas import DocumentType, ExtractionResult
+from .schemas import DocumentInfo, DocumentType, ExtractionResult
 
 
 @asynccontextmanager
@@ -52,6 +52,27 @@ def _read_upload(upload: UploadFile, settings: Settings) -> bytes:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get(
+    "/v1/documents",
+    response_model=list[DocumentInfo],
+    dependencies=[Depends(require_key)],
+    responses={401: _ERRORS[401]},
+)
+def list_documents() -> list[DocumentInfo]:
+    """The document types this service can read. Any of their `type` values can be sent as `document_type`."""
+    return [
+        DocumentInfo(
+            type=spec.type,
+            country=spec.country or None,
+            name=spec.name,
+            two_sided=spec.two_sided,
+            verified=spec.verified,
+            required=list(spec.required),
+        )
+        for spec in documents.specs()
+    ]
 
 
 @app.post(
