@@ -21,7 +21,7 @@ dependencies = [
     "fastapi>=0.143.0",
     "numpy>=2.5.4",
     # onnxruntime no longer ships macOS Intel wheels after 1.23.2.
-    "onnxruntime==1.23.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "onnxruntime==1.31.0; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "onnxruntime>=1.23.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "opencv-python-headless>=5.0.0.93",
     "pillow>=12.3.0",
