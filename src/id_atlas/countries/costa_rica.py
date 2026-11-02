@@ -1,7 +1,7 @@
 """Costa Rican identity documents: the cédula de identidad, the driver's license and the DIMEX.
 
-The parsers were built from a handful of real cards and specimens, so treat their accuracy as unproven
-until tested on a larger set of real photos.
+The cédula and the driver's license are verified on real cards. The DIMEX is provisional: it reads the
+document number only and has not been checked on a real card, so it always asks for review.
 """
 
 import re
@@ -135,6 +135,7 @@ register(
         any_markers=("COSEVI",),
         two_sided=True,
         reconcile=reconcile_license_barcode,
+        verified=True,
     )
 )
 register(

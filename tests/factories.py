@@ -159,3 +159,39 @@ def passport_page(mrz_lines: list[str] | None = None) -> Image.Image:
         ["REPÚBLICA DE COSTA RICA", "PASAPORTE / PASSPORT", "PRUEBA", "ANA MARIA", *(mrz_lines or [])],
         row_height=60,
     )
+
+
+def cnic_front(
+    *,
+    name: str | None = "Jane Sample",
+    parent_label: str = "Father Name",
+    parent: str | None = "John Sample",
+    gender: str | None = "F",
+    stay: str | None = "Pakistan",
+    number: str | None = "00000-0000000-0",
+    birth: str | None = "01.01.1990",
+    issue: str | None = "01.02.2020",
+    expiry: str | None = "01.02.2030",
+) -> Image.Image:
+    """A CNIC front laid out as the card is: each label with its value under it, in two columns. A value of
+    None leaves its label printed with nothing under it."""
+    img = Image.new("RGB", (900, 700), "white")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default(size=34)
+    draw.text((30, 20), "PAKISTAN", fill="black", font=font)
+    draw.text((420, 20), "National Identity Card", fill="black", font=font)
+    cells = [
+        (30, 100, "Name", name),
+        (30, 210, parent_label, parent),
+        (30, 320, "Gender", gender),
+        (330, 320, "Country of Stay", stay),
+        (30, 430, "Identity Number", number),
+        (430, 430, "Date of Birth", birth),
+        (30, 540, "Date of Issue", issue),
+        (430, 540, "Date of Expiry", expiry),
+    ]
+    for x, y, label, value in cells:
+        draw.text((x, y), label, fill="black", font=font)
+        if value is not None:
+            draw.text((x, y + 45), value, fill="black", font=font)
+    return img

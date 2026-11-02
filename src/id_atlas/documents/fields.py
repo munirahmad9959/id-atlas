@@ -17,11 +17,13 @@ FIELD_NAMES: dict[str, str] = {
     "second_surname": "Second family name, on cards that print one",
     "full_name": "The whole name, when the card prints it as one string",
     "father_name": "Father's name",
+    "husband_name": "Husband's name, on cards that print it in place of the father's name",
     "sex": "M, F or X",
     "birth_date": "Date of birth",
     "issue_date": "Date of issue",
     "expiry_date": "Date of expiry",
     "nationality": "Nationality, ISO 3166-1 alpha-3",
     "issuing_country": "Issuing country, ISO 3166-1 alpha-3",
+    "country_of_stay": "Country the holder lives in, as printed (free text, not a code)",
     "license_category": "Class of a driving licence, such as B1",
 }

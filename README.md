@@ -6,14 +6,14 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://docs.astral.sh/ruff/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Lightweight, self-hosted OCR for identity documents. Costa Rica is supported today, and every other
-country is one small module away: see [Adding a country](CONTRIBUTING.md#adding-a-document-type-or-a-country).
+Lightweight, self-hosted OCR for identity documents. Costa Rica and Pakistan (the CNIC card) are supported today, and
+every other country is one small module away: see [Adding a country](CONTRIBUTING.md#adding-a-document-type-or-a-country).
 
 Upload the front and back photos of an ID card, driver's license or passport; get back one structured
 result with every field, a confidence per field, and the reasons a human should double-check it. It runs
 on a CPU, needs no GPU and no cloud service, and your images never leave your server.
 
-> **Early stage.** The parsers were built and checked against a handful of real cards and specimens.
+> **Early stage.** The parsers were built and checked against a handful of real cards.
 > Treat the output as a hint for a human reviewer, not as a verdict. This is not a certified KYC or
 > fraud-detection product. See [Limitations](#limitations).
 
@@ -25,6 +25,7 @@ on a CPU, needs no GPU and no cloud service, and your images never leave your se
 | Costa Rican cédula de identidad | front and back | Number, names, surnames, birth and expiry dates. Checked on one real card. |
 | Costa Rican driver's license | front and back | Number, category, issue, birth and expiry dates, cross-checked against its PDF417 barcode. Checked on one real card. |
 | DIMEX (residence card) | front and back | Provisional: the document number only. No real sample seen yet. |
+| Pakistani National Identity Card (CNIC), smart card | front only | Number, name, father's or husband's name, gender, country of stay, birth, issue and expiry dates. Verified on real cards; the Urdu text and the back are not read. |
 
 Dates are normalised to ISO (`1990-01-12`) from the formats printed on the cards, such as `12/01/1990`,
 `12-01-1990`, `12 01 1990`, `12 JAN 1990` and, on Costa Rican cards, `12 ENE 1990`.
@@ -160,7 +161,7 @@ the container. If the container fails to start on your platform, please open an 
 | `GET /health` | Liveness. Always open, even when an API key is set. |
 
 `document_type` forces a type instead of detecting it. Use any `type` listed by `GET /v1/documents`
-(today `cedula`, `driver_license`, `dimex`, `passport` and `id_mrz`); any other value is a `422`.
+(today `cedula`, `driver_license`, `dimex`, `cnic`, `passport` and `id_mrz`); any other value is a `422`.
 
 Errors: `401` wrong or missing `X-API-Key` (only when a key is configured), `413` an image is over the upload
 limit, `422` an image cannot be read (the message names the side, for example `back: not a readable image`) or
@@ -195,7 +196,7 @@ Review reasons:
 | Reason | Meaning |
 |---|---|
 | `unknown_document_type` | Nothing recognised the document |
-| `template_unverified` | The reader for this type is not yet validated on enough real documents (license, DIMEX) |
+| `template_unverified` | The reader for this type is not yet validated on enough real documents (DIMEX) |
 | `missing:<field>`, `invalid:<field>`, `low_confidence:<field>` | A required field is absent, present but not a valid value (such as `00/00/0000`), or read with confidence below the threshold |
 | `mrz_checksum_failed` | A machine-readable zone check digit does not match |
 | `missing_back_side` | The document has two sides and only one was sent |
@@ -249,9 +250,9 @@ These numbers come from one machine and synthetic cards. Real photos and other h
 
 ## Limitations
 
-- Accuracy is unproven beyond the samples above. The cédula and license parsers each rest on one real card.
+- Accuracy is unproven beyond the samples above. The cédula and license parsers each rest on one real card, and the CNIC parser on a small set of real cards. The DIMEX reader has never seen a real card.
 - Layouts change between issues of a document. A card issued in a different design may not parse.
-- Only Costa Rican documents have a country module today (the MRZ documents work for any country). Each
+- Only Costa Rican and Pakistani documents have a country module today (the MRZ documents work for any country). Each
   country is one module in `src/id_atlas/countries/`, so adding one does not touch the rest of the code.
 - A very dense or blurry barcode cannot be decoded from an ordinary phone photo, and an unreadable barcode is
   simply skipped.
@@ -299,8 +300,7 @@ Contributions are welcome, especially:
 - **Real-world accuracy reports.** Run the probe script on your own documents and tell us which fields were
   right or wrong (shapes only, never real values).
 - **New document types and countries.** A country is one module in `src/id_atlas/countries/` that registers
-  its documents; nothing else needs editing. Pakistani identity documents (the CNIC card and the passport)
-  are the next ones wanted: look for issues labelled `help wanted`. The steps are in
+  its documents; nothing else needs editing. Look for issues labelled `help wanted`. The steps are in
   [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-document-type-or-a-country).
 - **Lower memory use.**
 

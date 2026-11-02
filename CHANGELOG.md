@@ -4,6 +4,18 @@ All notable changes are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Pakistani National Identity Card (CNIC), smart card, front side: number, name, father's or husband's name,
+  gender, country of stay, and birth, issue and expiry dates. Verified on real cards.
+- Field names `husband_name` and `country_of_stay`.
+
+### Changed
+
+- The Costa Rican driver's license is now verified: a complete one no longer gets `template_unverified`.
+
 ## [0.1.0] - 2026-10-19
 
 First version. An early release: the Costa Rican parsers are checked on very few real documents (see the

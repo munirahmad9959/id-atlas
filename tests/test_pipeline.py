@@ -80,9 +80,9 @@ def test_parents_birthplace_and_address_never_reach_the_result(cedula):
         assert private not in everything
 
 
-def test_a_complete_license_is_flagged_only_because_its_template_is_unvalidated(licence):
+def test_a_complete_verified_license_needs_no_review(licence):
     assert licence.document_type == "driver_license"
-    assert licence.review_reasons == ["template_unverified"]
+    assert licence.review_reasons == []
     assert [s.document_type for s in licence.sides] == ["driver_license", "driver_license"]
 
 
@@ -169,7 +169,7 @@ def test_a_barcode_that_disagrees_is_flagged_and_does_not_overwrite():
 
 def test_a_license_without_a_barcode_is_read_from_its_text():
     result = read(encode(license_front(barcode_text=None)), LICENSE_BACK)
-    assert result.barcodes == [] and result.review_reasons == ["template_unverified"]
+    assert result.barcodes == [] and result.review_reasons == []
     assert result.fields["document_number"].value.upper().replace("L", "I") == "CI-123456789"
 
 
@@ -264,7 +264,7 @@ def field(value="x", confidence=0.99) -> Field:
         (
             "driver_license",
             {"document_number": field(), "expiry_date": field(), "license_category": field()},
-            ["template_unverified"],
+            [],
         ),
         ("dimex", {}, ["template_unverified", "missing:document_number"]),
         ("dimex", {"document_number": field(None)}, ["template_unverified", "invalid:document_number"]),
